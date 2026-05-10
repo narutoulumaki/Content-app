@@ -5,15 +5,20 @@ from prompts import get_system_prompt, get_auto_suggest_prompt, HOOK_LIBRARY, FR
 from streamlit_mic_recorder import mic_recorder
 from supabase import create_client
 
-# 1. Page Config & Session State (The App's Memory)
+# 1. Page Config & Session State
 st.set_page_config(page_title="CreatorBrain OS", layout="wide")
 
+# App Memory
 if "raw_text" not in st.session_state:
     st.session_state.raw_text = ""
 if "vibe" not in st.session_state:
     st.session_state.vibe = list(HOOK_LIBRARY.keys())[0]
 if "framework" not in st.session_state:
     st.session_state.framework = list(FRAMEWORK_LIBRARY.keys())[0]
+if "suggested_vibe" not in st.session_state:
+    st.session_state.suggested_vibe = None
+if "suggested_framework" not in st.session_state:
+    st.session_state.suggested_framework = None
 
 # 2. Supabase Connection
 SUPABASE_URL = st.sidebar.text_input("Supabase URL", type="default")
@@ -40,7 +45,7 @@ with st.sidebar:
     api_key = st.text_input("Gemini API Key", type="password")
     st.divider()
     
-    # Dynamic Selectboxes that update based on AI suggestions
+    # Active Settings
     vibe_idx = list(HOOK_LIBRARY.keys()).index(st.session_state.vibe) if st.session_state.vibe in HOOK_LIBRARY else 0
     st.session_state.vibe = st.selectbox("Strategy Vibe", list(HOOK_LIBRARY.keys()), index=vibe_idx)
     
@@ -78,22 +83,30 @@ with col_audio:
                 resp_suggest = model.generate_content(auto_prompt)
                 
                 try:
-                    # Clean markdown if Gemini wraps it in ```json
                     clean_json = resp_suggest.text.replace('```json', '').replace('```', '').strip()
                     suggestion = json.loads(clean_json)
-                    st.session_state.vibe = suggestion.get("vibe", st.session_state.vibe)
-                    st.session_state.framework = suggestion.get("framework", st.session_state.framework)
-                    st.success("Strategy auto-selected in sidebar!")
+                    # Store suggestions instead of applying them instantly
+                    st.session_state.suggested_vibe = suggestion.get("vibe")
+                    st.session_state.suggested_framework = suggestion.get("framework")
                 except:
-                    st.warning("Transcription complete, but auto-suggest couldn't parse the JSON.")
+                    st.warning("Transcription complete, but AI couldn't formulate a suggestion.")
                 
                 st.rerun()
 
 with col_text:
     user_dump = st.text_area("📝 Edit Your Dump", value=st.session_state.raw_text, height=200)
     
-    # Fallback button if user types text manually instead of recording
-    if st.button("🪄 Auto-Suggest Strategy (For Typed Text)"):
+    # UI FOR SUGGESTIONS
+    if st.session_state.suggested_vibe and st.session_state.suggested_framework:
+        st.info(f"**💡 AI Suggests:** `{st.session_state.suggested_vibe}` + `{st.session_state.suggested_framework}`")
+        if st.button("✅ Apply This Strategy"):
+            st.session_state.vibe = st.session_state.suggested_vibe
+            st.session_state.framework = st.session_state.suggested_framework
+            st.session_state.raw_text = user_dump # Save any edits they made!
+            st.rerun()
+
+    # Fallback for manual typing
+    if st.button("🪄 Analyze Typed Text"):
         if user_dump and api_key:
             with st.spinner("Analyzing text..."):
                 genai.configure(api_key=api_key)
@@ -103,9 +116,9 @@ with col_text:
                 try:
                     clean_json = resp_suggest.text.replace('```json', '').replace('```', '').strip()
                     suggestion = json.loads(clean_json)
-                    st.session_state.vibe = suggestion.get("vibe", st.session_state.vibe)
-                    st.session_state.framework = suggestion.get("framework", st.session_state.framework)
-                    st.session_state.raw_text = user_dump # save their manual edits
+                    st.session_state.suggested_vibe = suggestion.get("vibe")
+                    st.session_state.suggested_framework = suggestion.get("framework")
+                    st.session_state.raw_text = user_dump 
                     st.rerun()
                 except:
                     st.error("Failed to parse AI suggestion.")
@@ -133,6 +146,8 @@ if st.button("Generate & Save Scripts 🔥", use_container_width=True):
                 st.markdown("### 🎬 Your Short-Form Scripts")
                 st.markdown(response.text)
                 
+                # Save manual edits to session state so they don't wipe out
+                st.session_state.raw_text = user_dump 
                 save_to_db(user_dump, response.text, st.session_state.vibe, st.session_state.framework, niche)
                 
         except Exception as e:

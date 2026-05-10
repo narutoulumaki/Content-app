@@ -38,3 +38,17 @@ Added Marketing Psychology Rules:
 The Jargon Translator: Force the AI to use simple terms in the hook (e.g., "Shoulders" instead of "Rotator Cuff") to stop the scroll, saving science for the body.
 
 The Bait & Switch: If using an aggressive "Stop doing this" hook, the AI must include an "if condition" and clarify the exercise isn't inherently bad.
+
+### Milestone Update: UX Overhaul & Framework Diversity
+
+**1. Content Strategy Pivot:**
+* Realized the SB7 framework was forcing scripts to be too long for Instagram Reels/Shorts.
+* Introduced a `FRAMEWORK_LIBRARY` decoupling "Vibe" (Hooks) from "Framework" (Structure).
+* Added fast-paced frameworks: `PAS (Problem-Agitate-Solve)`, `The Value Bomb`, and `The Contrarian`.
+* Enforced strict 100-120 word limits in `prompts.py`.
+
+**2. UI/UX Refinement ("Human-in-the-Loop" Auto-Suggest):**
+* Removed "invisible" state changes. The AI now transcribes the audio, analyzes the text, but **holds** the suggestion.
+* Added a UI block below the text editor that displays: `💡 AI Suggests: [Vibe] + [Framework]`.
+* Added an `✅ Apply This Strategy` button so the user retains complete control over their active sidebar settings.
+* Ensured manual text edits in the `st.text_area` are preserved in session state when applying AI suggestions.
