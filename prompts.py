@@ -1,4 +1,5 @@
 # prompts.py
+import json
 
 HOOK_LIBRARY = {
     "The Truth & Myths (Logic/Curiosity)": [
@@ -97,38 +98,55 @@ HOOK_LIBRARY = {
     ]
 }
 
-def get_system_prompt(vibe, niche="Fitness"):
+FRAMEWORK_LIBRARY = {
+    "PAS (Problem-Agitate-Solve)": "Start with the Hook. Agitate the pain point in 1 sentence. Provide the quick 1-step solution. End with a strong CTA.",
+    "The Value Bomb": "Start with the Hook. Deliver 3 rapid-fire facts or steps. No fluffy transitions. Pure value. End with a CTA.",
+    "The Contrarian": "Start with the Hook stating a common myth. Immediately state the exact opposite. Briefly explain why. End with a CTA.",
+    "SB7 (StoryBrand)": "Start with the Hook. Identify Character desire -> State Problem -> Position as Guide -> Give 3-step Plan -> Success/Failure -> CTA."
+}
+
+def get_system_prompt(vibe, framework, niche="Hybrid Fitness"):
     selected_hooks = "\n".join(HOOK_LIBRARY.get(vibe, []))
+    framework_rules = FRAMEWORK_LIBRARY.get(framework, "")
     
     return f"""
     ACT as a world-class Social Media Strategist and Ghostwriter for {niche} creators. 
     
-    STRICT RULE: You are NOT allowed to write your own hooks. You must use the HOOK TEMPLATES provided below.
-    Simply fill in the [brackets] or placeholders with specific details from the USER DUMP unless instructed otherwise.
-    Do not change the core wording of the hook.
+    STRICT CONSTRAINTS (CRITICAL):
+    1. SHORT-FORM ONLY: These scripts are for 30-60 second Instagram Reels. 
+    2. WORD LIMIT: Max 100-120 words per script. Keep it highly punchy.
+    3. NO YOUTUBE FLUFF: No "Welcome back guys" or "Let's dive in". Cut the fat.
     
-
-    HOOK TEMPLATES FOR THIS SESSION:
+    MARKETING PSYCHOLOGY RULES:
+    1. THE JARGON TRANSLATOR: Never use clinical/scientific terms in the Hook (e.g., use "Shoulders" instead of "Rotator Cuff"). Save science for the body.
+    2. THE BAIT & SWITCH: If using an aggressive "Stop doing [Exercise]" hook, you MUST add an "if condition" and clarify in the body that the exercise itself isn't bad.
+    
+    HOOK TEMPLATES TO USE (Pick 2):
     {selected_hooks}
     
-    DIRECTIONS:
+    SCRIPT FRAMEWORK TO FOLLOW:
+    {framework_rules}
+    
+    DIRECTIONS: 
     1. Analyze the User Dump.
-    2. Select the 3 most impactful Hook Templates from the provided list.
-    3. Fill the templates with "punchy" specific words from the dump.
-    4. Write a script following the SB7 (StoryBrand) framework for each.
-       - Hook: The filled template
-       - The Character: Identify the viewer's desire
-       - The Problem: The external and internal frustration
-       - The Guide: Why you (the creator) are the one to listen to
-       - The Plan: 3 clear, actionable steps
-       - Success/Avoid Failure: Contrast the two outcomes
-       - CTA: A clear instruction
+    2. Select the 2 most impactful Hook Templates from the provided list. DO NOT write your own hooks.
+    3. Fill the templates with specific words from the dump.
+    4. Write the scripts following the exact SCRIPT FRAMEWORK provided above.
     
     TONE: High-energy, No-BS, authoritative.
+    """
 
-    # We add this directly into your System Prompt
-
-MARKETING PSYCHOLOGY RULES:
-1. THE JARGON TRANSLATOR: Never use clinical or overly scientific terms in the Hook. If the dump mentions "rotator cuff", use "shoulders" in the hook. Introduce the scientific jargon in the body of the script.
-2. THE BAIT & SWITCH: If you use an aggressive hook like "Stop doing [Exercise]", you MUST use an "if condition" (e.g., "Stop doing X if you aren't doing Y"). In the body script, immediately clarify that the exercise is actually good, but their execution is dangerous.
+def get_auto_suggest_prompt(user_dump):
+    return f"""
+    Analyze the following raw text from a fitness creator. 
+    Based on the tone and content, select the best matching 'Vibe' and 'Framework' from the lists below.
+    
+    Available Vibes: {list(HOOK_LIBRARY.keys())}
+    Available Frameworks: {list(FRAMEWORK_LIBRARY.keys())}
+    
+    Return ONLY a raw JSON object (no markdown, no backticks). Format:
+    {{"vibe": "Exact Vibe Name", "framework": "Exact Framework Name"}}
+    
+    TEXT:
+    {user_dump}
     """
